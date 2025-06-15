@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Modern Fitness & Health Tracker PWA</title>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+<link rel="stylesheet" href="style.css">
+<style>
+ 
+
+</style>
+</head>
+<body>
+<div id="app" role="application" aria-label="Fitness and health tracking progressive web application">
+  <header id="header" role="banner">
+    <div class="stat" aria-live="polite">
+      <h2 id="user-name">Welcome, User</h2>
+      <small>Your Fitness Dashboard</small>
+    </div>
+    <div class="stat streak" aria-label="Workout streak">
+      <svg class="fire" viewBox="0 0 64 64" aria-hidden="true" focusable="false" role="img">
+        <path d="M32 2c-3 9 6 14 6 23 0 10-10 12-12 17a10 10 0 0 0 18-18 12 12 0 0 1-12-22z"></path>
+      </svg>
+      <span id="streak-count" aria-live="polite">Streak: 5 Days</span>
+    </div>
+    <div class="stat" aria-live="polite">
+      <h2 id="daily-goal-completed">Workout Goals: 2/3</h2>
+      <small>Today</small>
+    </div>
+  </header>
+
+  <aside id="sidebar-main" role="navigation" aria-label="Workout categories and programs">
+    <h3>Workout Categories</h3>
+    <ul id="workout-categories" tabindex="0" aria-label="Workout categories list" role="listbox" aria-multiselectable="false"></ul>
+
+    <h3>Programs</h3>
+    <ul id="programs" tabindex="0" aria-label="Workout programs list" role="listbox" aria-multiselectable="false"></ul>
+
+    <h3>Personal Records</h3>
+    <ul id="personal-records" tabindex="0" aria-label="Personal records list"></ul>
+  </aside>
+
+  <main id="main" role="main" tabindex="-1" aria-live="polite">
+    <section id="workout-timer" aria-label="Workout timer section">
+      <div id="timer-display" aria-live="assertive" aria-atomic="true">00:00</div>
+      <div id="timer-label">Ready to start</div>
+      <div id="timer-controls">
+        <button id="start-timer" aria-label="Start workout timer" type="button">Start</button>
+        <button id="pause-timer" aria-label="Pause workout timer" type="button" disabled>Pause</button>
+        <button id="reset-timer" aria-label="Reset workout timer" type="button" disabled>Reset</button>
+      </div>
+    </section>
+
+    <section id="exercise-library" aria-label="Exercise library section">
+      <div id="exercise-library-header">
+        <h3>Exercise Library</h3>
+        <input id="exercise-search" type="search" placeholder="Search exercises..." aria-label="Search exercises" />
+      </div>
+      <ul id="exercise-list" tabindex="0" role="list" aria-live="polite" aria-relevant="additions removals"></ul>
+    </section>
+
+    <section id="progress-tracking" aria-label="Progress tracking charts and data">
+      <h3>Progress Tracking</h3>
+      <div id="progress-charts" role="region" aria-live="polite" aria-atomic="true">
+        <canvas id="weight-chart" aria-label="Weight over time chart"></canvas>
+        <canvas id="bodyfat-chart" aria-label="Body fat percentage over time chart"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <aside id="rightbar" role="complementary" aria-label="Today summary, quick actions, and achievements">
+    <section id="today-summary">
+      <h3>Today's Summary</h3>
+      <div id="summary-stats" role="list">
+        <div class="summary-item" role="listitem" aria-label="Calories burned">
+          <span>🔥 Calories Burned</span><strong id="calories-burned">0</strong>
+        </div>
+        <div class="summary-item" role="listitem" aria-label="Water intake">
+          <span>💧 Water Intake</span><strong id="water-intake">0 / 2000 ml</strong>
+        </div>
+        <div class="summary-item" role="listitem" aria-label="Sleep quality">
+          <span>🛌 Sleep Quality</span><strong id="sleep-quality">Good</strong>
+        </div>
+      </div>
+    </section>
+    <section id="quick-actions" aria-label="Quick action buttons">
+      <h3>Quick Actions</h3>
+      <button class="quick-btn" id="action-new-workout" aria-label="Create new workout" title="Create New Workout"><span class="material-icons">fitness_center</span></button>
+      <button class="quick-btn" id="action-log-nutrition" aria-label="Log nutrition" title="Log Nutrition"><span class="material-icons">restaurant</span></button>
+      <button class="quick-btn" id="action-log-water" aria-label="Log water intake" title="Log Water Intake"><span class="material-icons">water_drop</span></button>
+      <button class="quick-btn" id="action-social-challenges" aria-label="View social challenges" title="Social Challenges"><span class="material-icons">groups</span></button>
+    </section>
+    <section id="achievements">
+      <h3>Achievements</h3>
+      <div id="achievements-list" aria-label="Achievement badges" role="list"></div>
+    </section>
+  </aside>
+
+  <footer id="footer" role="contentinfo">
+    Modern Fitness & Health Tracker PWA © 2024. All rights reserved.
+  </footer>
+</div>
+
+<!-- Exercise video modal -->
+<div id="exercise-video-modal" role="dialog" aria-modal="true" aria-label="Exercise demonstration video">
+  <button class="close-btn" aria-label="Close video" title="Close">&times;</button>
+  <video controls></video>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+<script>
+  // Define some mock data structures per requirements
+  const workouts = [
+    {
+      id: 'w1',
+      name: 'Full Body Strength',
+      exercises: [
+        { id: 'ex1', name: 'Push Ups', sets: [{ reps: 12, rest: 30 }, { reps: 10, rest: 30 }], instructions: 'Keep your back straight...', videoUrl: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/949b4a8b-13cc-4b27-a987-5ed315d74103.png', muscleGroups: ['Chest', 'Triceps'] },
+        { id: 'ex2', name: 'Squats', sets: [{ reps: 15, rest: 40 }, { reps: 15, rest: 40 }], instructions: 'Keep your heels on the ground...', videoUrl: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/bfe266f4-0853-40b6-8651-a61ff2f16b7f.png', muscleGroups: ['Legs', 'Glutes'] }
+      ],
+      duration: 1800,
+      difficulty: 'Intermediate',
+      category: 'Strength',
+      muscleGroups: ['Chest', 'Legs', 'Triceps', 'Glutes'],
+      equipment: ['Bodyweight']
+    },
+    {
+      id: 'w2',
+      name: 'Cardio Blast',
+      exercises: [
+        { id: 'ex3', name: 'Jumping Jacks', sets: [{ reps: 30, rest: 30 }], instructions: 'Keep a steady pace.', videoUrl: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/9ddb09cc-436a-48b9-b090-311cf8391e4f.png', muscleGroups: ['Full Body'] },
+        { id: 'ex4', name: 'Mountain Climbers', sets: [{ reps: 20, rest: 30 }], instructions: 'Engage your core.', videoUrl: 'https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/2035a50f-eca4-476c-b9bc-c9df7ee8f517.png', muscleGroups: ['Core', 'Legs'] }
+      ],
+      duration: 1200,
+      difficulty: 'Beginner',
+      category: 'Cardio',
+      muscleGroups: ['Full Body', 'Core', 'Legs'],
+      equipment: ['Bodyweight']
+    }
+  ];
+
+  const sessions = []; // Workout sessions
+  const progress = [
+    { date: '2024-05-01', weight: 80, bodyFat: 20 },
+    { date: '2024-05-08', weight: 78, bodyFat: 19.5 },
+    { date: '2024-05-15', weight: 77, bodyFat: 19 },
+    { date: '2024-05-22', weight: 76, bodyFat: 18.5 }
+  ];
+  const goals = [
+    { id: 'g1', type: 'workouts', target: 3, current: 2, deadline: '2024-05-31', milestones: [], achieved: false }
+  ];
+  const nutrition = [];
+  const achievements = [
+    { id: 'a1', name: 'First Workout', description: 'Complete your first workout', icon: 'sports_handball', unlockedAt: new Date().toISOString(), rarity: 'common' },
+    { id: 'a2', name: 'Water Drinker', description: 'Log 2L water intake', icon: 'water_drop', unlockedAt: null, rarity: 'rare' }
+  ];
+  const currentUser = {
+    id: 'user1',
+    name: 'User',
+    streak: 5,
+    dailyGoals: { workouts: 3 }
+  };
+
+  // Store current workout session state
+  let currentSession = null;
+  let timerInterval = null;
+  let timerSeconds = 0;
+  let timerRunning = false;
+  let timerPaused = false;
+
+  // DOM references
+  const workoutCategoriesEl = document.getElementById('workout-categories');
+  const programsEl = document.getElementById('programs');
+  const personalRecordsEl = document.getElementById('personal-records');
+  const exerciseListEl = document.getElementById('exercise-list');
+  const exerciseSearchInput = document.getElementById('exercise-search');
+  const timerDisplay = document.getElementById('timer-display');
+  const timerLabel = document.getElementById('timer-label');
+  const startTimerBtn = document.getElementById('start-timer');
+  const pauseTimerBtn = document.getElementById('pause-timer');
+  const resetTimerBtn = document.getElementById('reset-timer');
+  const streakCountEl = document.getElementById('streak-count');
+  const dailyGoalCompletedEl = document.getElementById('daily-goal-completed');
+  const userNameEl = document.getElementById('user-name');
+  const caloriesBurnedEl = document.getElementById('calories-burned');
+  const waterIntakeEl = document.getElementById('water-intake');
+  const sleepQualityEl = document.getElementById('sleep-quality');
+  const achievementsListEl = document.getElementById('achievements-list');
+
+  const exerciseVideoModal = document.getElementById('exercise-video-modal');
+  const exerciseVideoEl = exerciseVideoModal.querySelector('video');
+  const exerciseModalCloseBtn = exerciseVideoModal.querySelector('.close-btn');
+
+  // Initialize UI content and events
+  function initUI() {
+    userNameEl.textContent = 'Welcome, ' + currentUser.name;
+
+    // Populate workout categories
+    const uniqueCategories = [...new Set(workouts.map(w => w.category))];
+    uniqueCategories.forEach(cat => {
+      const li = document.createElement('li');
+      li.textContent = cat;
+      li.tabIndex = 0;
+      li.setAttribute('role', 'option');
+      li.addEventListener('click', () => {
+        filterWorkoutsByCategory(cat);
+      });
+      workoutCategoriesEl.appendChild(li);
+    });
+
+    // Populate programs (simulate)
+    workouts.forEach(w => {
+      const li = document.createElement('li');
+      li.textContent = w.name;
+      li.tabIndex = 0;
+      li.setAttribute('role', 'option');
+      li.addEventListener('click', () => {
+        startWorkout(w.id);
+      });
+      programsEl.appendChild(li);
+    });
+
+    // Populate personal records placeholder
+    ['Bench Press: 100kg', 'Squat: 140kg', 'Deadlift: 160kg'].forEach(record => {
+      const li = document.createElement('li');
+      li.textContent = record;
+      personalRecordsEl.appendChild(li);
+    });
+
+    // Populate exercise library
+    refreshExerciseLibrary();
+
+    // Populate achievements badges
+    renderAchievements();
+
+    // Initialize weight and bodyfat charts
+    initProgressCharts();
+
+    // Timer button events
+    startTimerBtn.addEventListener('click', startTimer);
+    pauseTimerBtn.addEventListener('click', pauseTimer);
+    resetTimerBtn.addEventListener('click', resetTimer);
+
+    // Exercise search filter
+    exerciseSearchInput.addEventListener('input', refreshExerciseLibrary);
+
+    // Quick action buttons
+    document.getElementById('action-new-workout').addEventListener('click', () => alert('New workout creation coming soon.'));
+    document.getElementById('action-log-nutrition').addEventListener('click', () => alert('Nutrition logging coming soon.'));
+    document.getElementById('action-log-water').addEventListener('click', () => {
+      logWaterIntake(250);
+    });
+    document.getElementById('action-social-challenges').addEventListener('click', () => alert('Social challenges coming soon.'));
+
+    // Exercise video modal close
+    exerciseModalCloseBtn.addEventListener('click', () => {
+      exerciseVideoModal.classList.remove('active');
+      exerciseVideoEl.pause();
+      exerciseVideoEl.src = '';
+    });
+
+    exerciseVideoModal.addEventListener('click', (e) => {
+      if (e.target === exerciseVideoModal) {
+        exerciseModalCloseBtn.click();
+      }
+    });
+  }
+
+  function renderAchievements() {
+    achievementsListEl.innerHTML = '';
+    achievements.forEach(a => {
+      const badge = document.createElement('div');
+      badge.className = 'achievement-badge';
+      if (a.unlockedAt) {
+        badge.classList.add('unlocked');
+        badge.setAttribute('tabindex', '0');
+        badge.setAttribute('aria-label', `Badge unlocked: ${a.name}. ${a.description}`);
+      } else {
+        badge.setAttribute('aria-label', `Badge locked: ${a.name}. ${a.description}`);
+      }
+      const icon = document.createElement('span');
+      icon.className = 'material-icons';
+      icon.textContent = a.icon;
+      const name = document.createElement('span');
+      name.textContent = a.name;
+      badge.appendChild(icon);
+      badge.appendChild(name);
+      achievementsListEl.appendChild(badge);
+    });
+  }
+
+  // Filters workouts by category
+  function filterWorkoutsByCategory(category) {
+    programsEl.innerHTML = '';
+    workouts.filter(w => w.category === category).forEach(w => {
+      const li = document.createElement('li');
+      li.textContent = w.name;
+      li.tabIndex = 0;
+      li.setAttribute('role', 'option');
+      li.addEventListener('click', () => {
+        startWorkout(w.id);
+      });
+      programsEl.appendChild(li);
+    });
+  }
+
+  // Workout timer functionality
+  function startTimer() {
+    if(timerRunning) return;
+    timerRunning = true;
+    startTimerBtn.disabled = true;
+    pauseTimerBtn.disabled = false;
+    resetTimerBtn.disabled = false;
+    timerLabel.textContent = 'Workout in progress';
+
+    timerInterval = setInterval(() => {
+      timerSeconds++;
+      timerDisplay.textContent = formatSeconds(timerSeconds);
+      updateCaloriesBurned(timerSeconds);
+    }, 1000);
+  }
+  function pauseTimer() {
+    if(!timerRunning) return;
+    clearInterval(timerInterval);
+    timerRunning = false;
+    startTimerBtn.disabled = false;
+    pauseTimerBtn.disabled = true;
+    timerLabel.textContent = 'Paused';
+  }
+  function resetTimer() {
+    clearInterval(timerInterval);
+    timerSeconds = 0;
+    timerRunning = false;
+    startTimerBtn.disabled = false;
+    pauseTimerBtn.disabled = true;
+    resetTimerBtn.disabled = true;
+    timerDisplay.textContent = '00:00';
+    timerLabel.textContent = 'Ready to start';
+    caloriesBurnedEl.textContent = '0';
+  }
+  function formatSeconds(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return (m < 10 ? '0':'')+m + ':' + (s <10 ? '0':'') + s;
+  }
+  // Simulate calories burned calculation (25 cal per minute)
+  function updateCaloriesBurned(seconds) {
+    const calories = Math.floor(seconds / 60 * 25);
+    caloriesBurnedEl.textContent = calories;
+  }
+
+  // Exercise library render & filter
+  function refreshExerciseLibrary() {
+    exerciseListEl.innerHTML = '';
+    const term = exerciseSearchInput.value.trim().toLowerCase();
+    const filteredExercises = workouts.flatMap(w => w.exercises)
+      .filter(ex => ex.name.toLowerCase().includes(term));
+    filteredExercises.forEach(ex => {
+      const li = document.createElement('li');
+      li.tabIndex = 0;
+      li.setAttribute('role', 'listitem');
+      li.setAttribute('aria-label', ex.name + ' exercise. Click to view instructions and demo.');
+      li.innerHTML = \`
+        <img src="\${ex.videoUrl}" alt="Demo for \${ex.name} exercise" loading="lazy" onerror="this.src='https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/56614898-15ff-42f0-bcd5-a07bbc58e91d.png';" />
+        <div class="exercise-info">
+          <h4>\${ex.name}</h4>
+          <small>Muscle Groups: \${ex.muscleGroups.join(', ')}</small>
+        </div>
+        <span class="material-icons">play_circle_filled</span>
+      \`;
+      li.addEventListener('click', () => {
+        openExerciseVideo(ex.videoUrl, ex.instructions);
+      });
+      exerciseListEl.appendChild(li);
+    });
+  }
+
+  // Show exercise video modal
+  function openExerciseVideo(videoUrl, instructions) {
+    exerciseVideoEl.src = videoUrl;
+    exerciseVideoModal.classList.add('active');
+    exerciseVideoEl.focus();
+  }
+
+  // Start workout session by workout Id
+  function startWorkout(workoutId) {
+    const workout = workouts.find(w => w.id === workoutId);
+    if(!workout) return alert('Workout not found.');
+
+    currentSession = {
+      id: crypto.randomUUID(),
+      workoutId,
+      userId: currentUser.id,
+      startTime: new Date().toISOString(),
+      exercises: workout.exercises.map(ex => ({
+        ...ex,
+        sets: ex.sets.map(set => ({ ...set, completed: false })),
+        completed: false
+      })),
+      totalDuration: 0,
+      caloriesBurned: 0,
+      notes: ''
+    };
+
+    // Reset Timer for workout
+    resetTimer();
+    startTimer();
+
+    // Update daily goals progress
+    updateDailyGoals('workouts', 1);
+
+    alert(\`Started Workout: \${workout.name}\`);
+  }
+
+  // Update daily goals and UI
+  function updateDailyGoals(type, count) {
+    const goal = goals.find(g => g.type === type);
+    if(goal) {
+      goal.current += count;
+      if(goal.current >= goal.target) {
+        goal.achieved = true;
+        // Unlock achievement
+        const ach = achievements.find(a => a.name.includes('First'));
+        if(ach && !ach.unlockedAt) {
+          ach.unlockedAt = new Date().toISOString();
+          renderAchievements();
+          alert(\`Achievement Unlocked: \${ach.name}\`);
+        }
+      }
+      dailyGoalCompletedEl.textContent = \`\${capitalize(type)} Goals: \${goal.current}/\${goal.target}\`;
+    }
+  }
+
+  // Log water intake example (mL)
+  let waterToday = 0;
+  function logWaterIntake(amount) {
+    waterToday += amount;
+    waterIntakeEl.textContent = \`\${waterToday} / 2000 ml\`;
+    alert(\`Logged \${amount}ml water intake.\`);
+  }
+
+  // Capitalize string
+  function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  // Initialize progress charts using Chart.js
+  let weightChart, bodyFatChart;
+  function initProgressCharts() {
+    const weightCtx = document.getElementById('weight-chart').getContext('2d');
+    const bodyFatCtx = document.getElementById('bodyfat-chart').getContext('2d');
+
+    const dates = progress.map(p => p.date);
+    const weights = progress.map(p => p.weight);
+    const bodyFats = progress.map(p => p.bodyFat);
+
+    weightChart = new Chart(weightCtx, {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [{
+          label: 'Weight (kg)',
+          data: weights,
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34,197,94,0.3)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'nearest', intersect: false },
+        scales: {
+          y: { 
+            beginAtZero: false,
+            grid: { color: '#064e3b' },
+            ticks: { color: '#a5d6a7' }
+          },
+          x: {
+            grid: { color: '#064e3b' },
+            ticks: { color: '#a5d6a7' }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: { color: '#a5d6a7' }
+          }
+        },
+        animation: { duration: 800, easing: 'easeOutQuart' }
+      }
+    });
+
+    bodyFatChart = new Chart(bodyFatCtx, {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [{
+          label: 'Body Fat (%)',
+          data: bodyFats,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16,185,129,0.3)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'nearest', intersect: false },
+        scales: {
+          y: { 
+            beginAtZero: false,
+            grid: { color: '#064e3b' },
+            ticks: { color: '#a5d6a7' }
+          },
+          x: {
+            grid: { color: '#064e3b' },
+            ticks: { color: '#a5d6a7' }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: { color: '#a5d6a7' }
+          }
+        },
+        animation: { duration: 800, easing: 'easeOutQuart' }
+      }
+    });
+  }
+
+  // Initialization call
+  initUI();
+</script>
+</body>
+</html>
+
